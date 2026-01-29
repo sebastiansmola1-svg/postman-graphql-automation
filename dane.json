@@ -1,0 +1,5 @@
+[
+  { "charId": 1, "expectedName": "Rick Sanchez" },
+  { "charId": 2, "expectedName": "Morty Smith" },
+  { "charId": 3, "expectedName": "Summer Smith" }
+]
