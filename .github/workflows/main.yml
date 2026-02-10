@@ -4,6 +4,9 @@ on:
   push:
     branches: [ main ]
   workflow_dispatch:
+  schedule:
+    # 12:00 UTC to 13:00 czasu polskiego (zima)
+    - cron: '0 12 * * *'
 
 jobs:
   test:
