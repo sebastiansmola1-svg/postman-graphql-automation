@@ -1,0 +1,203 @@
+{
+  "info": {
+    "_postman_id": "276252e5-208f-40b1-8d0c-70b2f4e5d568",
+    "name": "Kurs GraphQL",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "26853934"
+  },
+  "item": [
+    {
+      "name": "{{baseUrl}}",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "// ============================================",
+              "// 1. Variable Validation",
+              "// ============================================",
+              "",
+              "// Używamy pm.variables.get, aby priorytetem były dane z pliku .json (Iteration Data)",
+              "const baseUrl = pm.variables.get(\"baseUrl\");",
+              "const charId = pm.variables.get(\"charId\");",
+              "",
+              "pm.test(\"Required variables are set\", () => {",
+              "    pm.expect(baseUrl, \"baseUrl variable is not set\").to.not.be.undefined;",
+              "    pm.expect(charId, \"charId variable is not set\").to.not.be.undefined;",
+              "});",
+              "",
+              "if (!baseUrl || !charId) {",
+              "    console.error(\"❌ Missing required variables! Check Environment or Data File.\");",
+              "} else {",
+              "    console.log(\"✅ All required variables are set\");",
+              "}",
+              "",
+              "// ============================================",
+              "// 2. Request Information Logging",
+              "// ============================================",
+              "",
+              "console.log(\"=\".repeat(50));",
+              "console.log(\"🚀 GraphQL Request Information\");",
+              "console.log(\"Request Name:\", pm.info.requestName);",
+              "console.log(\"Character ID:\", charId);",
+              "console.log(\"Iteration:\", pm.info.iteration + 1, \"of\", pm.info.iterationCount);",
+              "console.log(\"=\".repeat(50));",
+              "",
+              "// ============================================",
+              "// 3. Generate Timestamp & Headers",
+              "// ============================================",
+              "",
+              "const timestamp = new Date().toISOString();",
+              "pm.variables.set(\"requestTimestamp\", timestamp);",
+              "",
+              "pm.request.headers.add({ key: \"X-Request-Timestamp\", value: timestamp });",
+              "pm.request.headers.add({ key: \"X-Request-ID\", value: pm.info.requestId });"
+            ],
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {}
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "// Parsujemy JSON tylko RAZ na początku dla wydajności",
+              "const response = pm.response.json();",
+              "const character = response.data ? response.data.character : null;",
+              "",
+              "// Pobieramy dane oczekiwane z pliku JSON",
+              "const expectedName = pm.iterationData.get(\"expectedName\");",
+              "const expectedStatus = pm.iterationData.get(\"expectedStatus\");",
+              "const expectedId = pm.iterationData.get(\"expectedId\");",
+              "",
+              "// ============================================",
+              "// 1. Walidacja Struktury",
+              "// ============================================",
+              "pm.test(\"Status code is 200\", () => {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test(\"Response has no GraphQL errors\", () => {",
+              "    pm.expect(response, \"Found GraphQL errors\").to.not.have.property('errors');",
+              "});",
+              "",
+              "// ============================================",
+              "// 2. Dynamiczna Walidacja Danych (TU BYŁ BŁĄD)",
+              "// ============================================",
+              "if (character) {",
+              "    // Sprawdzamy imię dynamicznie zamiast \"Rick Sanchez\"",
+              "    if (expectedName) {",
+              "        pm.test(`Character name matches: ${expectedName}`, () => {",
+              "            // TRZEBA UŻYĆ expectedName z pliku",
+              "            pm.expect(character.name).to.eql(expectedName);",
+              "        });",
+              "    }",
+              "",
+              "    if (expectedStatus) {",
+              "        pm.test(`Status matches: ${expectedStatus}`, () => {",
+              "            pm.expect(character.status).to.eql(expectedStatus);",
+              "        });",
+              "    }",
+              "",
+              "    // Walidacja odcinków",
+              "    pm.test(\"Episodes validation\", () => {",
+              "        pm.expect(character.episode).to.be.an('array').that.is.not.empty;",
+              "        pm.expect(character.episode.length).to.be.at.least(2);",
+              "    });",
+              "}"
+            ],
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {}
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "graphql",
+          "graphql": {
+            "query": "query getChar($id: ID!) {\n  character(id: $id) {\n    id\n    name\n    status\n    species\n    episode {\n        air_date\n        name\n    }\n  }\n}",
+            "variables": "{\n  \"id\": \"{{charId}}\"\n}"
+          }
+        },
+        "url": {
+          "raw": "{{baseUrl}}",
+          "host": [
+            "{{baseUrl}}"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "episode",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "// 1. NAJPIERW wyciągamy dane z pliku i z odpowiedzi",
+              "const expectedNameFromFile = pm.iterationData.get(\"expectedName\");",
+              "const actualName = pm.response.json().data.character.name;",
+              "",
+              "// 2. DOPIERO POTEM używamy ich w teście",
+              "pm.test(`Character name should be ${expectedNameFromFile}`, function () {",
+              "    pm.expect(actualName).to.equal(expectedNameFromFile);",
+              "});",
+              "",
+              "pm.test(\"Character name is Rick Sanchez\", function () {",
+              "    pm.expect(pm.response.json().data.character.name).to.eql(\"Rick Sanchez\");",
+              "});",
+              "pm.test(\"Character status is Alive\", function () {",
+              "    pm.expect(pm.response.json().data.character.status).to.eql(\"Alive\");",
+              "});",
+              "pm.test(\"Check if episodes are valid\", function () {",
+              "    const episodes = pm.response.json().data.character.episode;",
+              "    pm.expect(episodes).to.be.an('array').that.is.not.empty;",
+              "});",
+              "pm.test(\"Should be more than two episodes\", function () {",
+              "    const episodes = pm.response.json().data.character.episode;",
+              "    pm.expect(episodes.length).to.be.at.least(2);",
+              "});"
+            ],
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {}
+          }
+        },
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              ""
+            ],
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {}
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "graphql",
+          "graphql": {
+            "query": "query getChar($id: ID!) {\n  character(id: $id) {\n    name\n    status\n    episode {\n        name\n        air_date\n    }\n  }\n}",
+            "variables": "{\n  \"id\": \"{{charId}}\"\n}"
+          }
+        },
+        "url": {
+          "raw": "{{baseUrl}}",
+          "host": [
+            "{{baseUrl}}"
+          ]
+        }
+      },
+      "response": []
+    }
+  ]
+}
