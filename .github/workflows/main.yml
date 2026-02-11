@@ -4,9 +4,6 @@ on:
   push:
     branches: [ main ]
   workflow_dispatch:
-  schedule:
-    # 12:00 UTC to 13:00 czasu polskiego (zima)
-    - cron: '0 12 * * *'
 
 jobs:
   test:
@@ -20,11 +17,8 @@ jobs:
         run: |
           curl -o- "https://dl-cli.pstmn.io/install/linux64.sh" | sh
 
-      - name: Login to Postman CLI
-        run: postman login --with-api-key ${{ secrets.POSTMAN_API_KEY }}
-
       - name: Run API Tests
         run: |
-          postman collection run 26853934-276252e5-208f-40b1-8d0c-70b2f4e5d568 \
-          -e 26853934-67266d17-9ec6-4f23-b677-6b6f85cc287d \
-          -d dane.json
+          postman collection run "Kurs GraphQL.postman_collection.json" \
+          -d dane.json \
+          --env-var "baseUrl=https://rickandmortyapi.com/graphql"
